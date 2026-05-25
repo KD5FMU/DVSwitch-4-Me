@@ -5,7 +5,7 @@
 
 ```
 cd /tmp
-wget http://dvswitch.org/trixie
+wget http://44.15.64.51/trixie
 chmod +x trixie
 apt update --allow-releaseinfo-change
 ./trixie
