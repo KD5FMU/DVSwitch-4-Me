@@ -8,7 +8,7 @@ cd /tmp
 wget https://raw.githubusercontent.com/KD5FMU/DVSwitch-4-Me/refs/heads/main/trixie
 sudo chmod +x trixie
 sudo apt update --allow-releaseinfo-change
-./trixie
+sudo ./trixie
 ```
 ## And Then
 ```
