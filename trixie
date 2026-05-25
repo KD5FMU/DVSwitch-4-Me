@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -o errexit
+
+# N4IRS 10/25/2022
+# Updated 02/04/2026 for SHA-256 Compliance and Time Sync Check
+
+#################################################
+#                                               #
+#    Add/Correct DVSwitch Repository & Key      #
+#                                               #
+#################################################
+
+if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+    echo "Not running as root"
+    echo "either run as root or with sudo"
+    exit 1
+fi
+
+echo ""
+echo "Starting DVSwitch repository install/correction"
+
+# 1. Time Synchronization Check
+CURRENT_YEAR=$(date +%Y)
+if [ "$CURRENT_YEAR" -lt 2026 ]; then
+    echo "WARNING: System clock appears to be incorrect ($CURRENT_YEAR)."
+    echo "Attempting to trigger a time sync..."
+    [ -x "/usr/bin/timedatectl" ] && timedatectl set-ntp true || echo "Please check your system time."
+fi
+
+# Detect distribution
+distribution=$(lsb_release -sc 2>/dev/null || echo "bookworm")
+
+# 2. Install dependencies
+[ ! -x "/usr/bin/gpg" ] && apt update && apt install gnupg -y
+[ ! -x "/usr/bin/curl" ] && apt install curl -y
+[ ! -x "/usr/bin/host" ] && apt install host -y
+[ ! -x "/bin/netstat" ] && apt install net-tools -y
+[ ! -x "/usr/bin/file" ] && apt install file -y
+
+# 3. Install the GPG key
+echo "Downloading DVSwitch GPG keyring..."
+curl -fsSL http://44.15.64.51/DVSwitch_Repository/dvswitch-keyring.gpg -o /usr/share/keyrings/dvswitch-keyring.gpg
+
+# Verification Check
+KEY_FILE="/usr/share/keyrings/dvswitch-keyring.gpg"
+EXPECTED_ID="72147EC1E788D4C3"
+
+# Check size (735 bytes is the known HTML failure size)
+if [ "$(stat -c%s "$KEY_FILE")" -lt 1000 ]; then
+    echo "ERROR: Keyring is too small. Check URL/Path."
+    exit 1
+fi
+
+# Check file type
+if ! file "$KEY_FILE" | grep -qE "PGP|GPG|key"; then
+    echo "ERROR: File is not a valid PGP keyring."
+    exit 1
+fi
+
+# Check Key ID
+if ! gpg --show-keys "$KEY_FILE" 2>/dev/null | grep -q "$EXPECTED_ID"; then
+    echo "ERROR: Key ID mismatch. Expected $EXPECTED_ID."
+    exit 1
+fi
+
+echo "Verified: Valid DVSwitch Keyring ($EXPECTED_ID)"
+
+# 4. Add/Correct the repository file
+echo "Configuring /etc/apt/sources.list.d/dvswitch.list..."
+echo "# Official DVSwitch repository" > /etc/apt/sources.list.d/dvswitch.list
+echo "deb [signed-by=/usr/share/keyrings/dvswitch-keyring.gpg] http://44.15.64.51/DVSwitch_Repository bookworm hamradio" >> /etc/apt/sources.list.d/dvswitch.list
+
+echo "#" >> /etc/apt/sources.list.d/dvswitch.list
+
+# 5. Clean up any broken metadata cache
+rm -f /var/lib/apt/lists/44.15.64.51*
+
+# 6. Download package information
+echo "Updating package information..."
+apt update --allow-releaseinfo-change
+
+# 7. Print the installed repositories for verification
+echo ""
+echo "Installed DVSwitch repositories:"
+apt-cache policy | grep "44.15.64.51" | sort -u
+
+echo ""
+echo "Finished DVSwitch repository install"
