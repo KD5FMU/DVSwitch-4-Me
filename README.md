@@ -11,8 +11,8 @@ sudo ./trixie
 ```
 ## And Then
 ```
-apt update
-apt install dvswitch-server -y
+sudo apt update
+sudo apt install dvswitch-server -y
 ```
 
 try that
