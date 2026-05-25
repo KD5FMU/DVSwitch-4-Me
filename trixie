@@ -73,7 +73,7 @@ echo "deb [signed-by=/usr/share/keyrings/dvswitch-keyring.gpg] http://dvswitch.o
 echo "#" >> /etc/apt/sources.list.d/dvswitch.list
 
 # 5. Clean up any broken metadata cache
-rm -f /var/lib/apt/lists/44.15.64.51*
+rm -f /var/lib/apt/lists/dvswitch.org*
 
 # 6. Download package information
 echo "Updating package information..."
